@@ -87,11 +87,7 @@ def clear_result():
     return gr.update(value=None)
 
 
-title = """<h1 align="center">Diffusers Fast Inpaint</h1>
-<div align="center">Draw the mask over the subject you want to erase or change and write what you want to inpaint it with.</div>
-<div align="center">This is a lighting model with almost no CFG and 12 steps, so don't expect high quality generations.</div>
-<div align="center">This space is a PoC made for the guide <a href='https://huggingface.co/blog/OzzyGT/diffusers-image-fill'>Diffusers Image Fill</a>.</div>
-"""
+title = """<h1 align="center">ProFaker's Editing</h1>"""
 
 with gr.Blocks() as demo:
     gr.HTML(title)
