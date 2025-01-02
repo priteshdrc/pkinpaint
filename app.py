@@ -1,6 +1,5 @@
 import gradio as gr
 import spaces
-from RealESRGAN import RealESRGAN
 import torch
 from diffusers import AutoencoderKL, TCDScheduler, DPMSolverMultistepScheduler
 from diffusers.models.model_loading_utils import load_state_dict
@@ -47,43 +46,8 @@ pipe = StableDiffusionXLFillPipeline.from_pretrained(
 pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config,algorithm_type="dpmsolver++",use_karras_sigmas=True)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model2 = RealESRGAN(device, scale=2)
-model2.load_weights('weights/RealESRGAN_x2.pth', download=True)
-model4 = RealESRGAN(device, scale=4)
-model4.load_weights('weights/RealESRGAN_x4.pth', download=True)
 
 
-@spaces.GPU
-def inference(image, size):
-    global model2
-    global model4
-    global model8
-    if image is None:
-        raise gr.Error("Image not uploaded")
-        
-
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    
-    if size == '2x':
-        try:
-            result = model2.predict(image.convert('RGB'))
-        except torch.cuda.OutOfMemoryError as e:
-            print(e)
-            model2 = RealESRGAN(device, scale=2)
-            model2.load_weights('weights/RealESRGAN_x2.pth', download=False)
-            result = model2.predict(image.convert('RGB'))
-    elif size == '4x':
-        try:
-            result = model4.predict(image.convert('RGB'))
-        except torch.cuda.OutOfMemoryError as e:
-            print(e)
-            model4 = RealESRGAN(device, scale=4)
-            model4.load_weights('weights/RealESRGAN_x4.pth', download=False)
-            result = model2.predict(image.convert('RGB'))
-            
-    print(f"Image size ({device}): {size} ... OK")
-    return result
 
 def add_watermark(image, text="ProFaker", font_path="BRLNSDB.TTF", font_size=25):
     # Load the Berlin Sans Demi font with the specified size
@@ -101,7 +65,7 @@ def add_watermark(image, text="ProFaker", font_path="BRLNSDB.TTF", font_size=25)
     return image
 
 @spaces.GPU
-def fill_image(prompt, negative_prompt, image, model_selection, paste_back, guidance_scale, num_steps, size):
+def fill_image(prompt, negative_prompt, image, model_selection, paste_back, guidance_scale, num_steps):
     (
         prompt_embeds,
         negative_prompt_embeds,
@@ -138,8 +102,6 @@ def fill_image(prompt, negative_prompt, image, model_selection, paste_back, guid
         cnet_image = image
 
     cnet_image = add_watermark(cnet_image)
-    if size !="0":
-        cnet_image = inference(cnet_image,size)
     yield source, cnet_image
 
 
@@ -179,7 +141,6 @@ with gr.Blocks() as demo:
                     step=1,
                     label="Steps"
                 )
-                size = gr.Radio(["0", "2x", "4x"], type="value", value="0", label="Image Quality")
             
             input_image = gr.ImageMask(
                 type="pil", label="Input Image", crop_size=(1024,1024), layers=False
@@ -223,7 +184,7 @@ with gr.Blocks() as demo:
         outputs=use_as_input_button,
     ).then(
         fn=fill_image,
-        inputs=[prompt, negative_prompt, input_image, model_selection, paste_back, guidance_scale, num_steps, size],
+        inputs=[prompt, negative_prompt, input_image, model_selection, paste_back, guidance_scale, num_steps],
         outputs=result,
     ).then(
         fn=lambda: gr.update(visible=True),
@@ -241,7 +202,7 @@ with gr.Blocks() as demo:
         outputs=use_as_input_button,
     ).then(
         fn=fill_image,
-        inputs=[prompt, negative_prompt, input_image, model_selection, paste_back, guidance_scale, num_steps, size],
+        inputs=[prompt, negative_prompt, input_image, model_selection, paste_back, guidance_scale, num_steps],
         outputs=result,
     ).then(
         fn=lambda: gr.update(visible=True),
