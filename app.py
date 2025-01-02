@@ -45,7 +45,23 @@ pipe = StableDiffusionXLFillPipeline.from_pretrained(
 pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config)
 
 
-@spaces.GPU(duration=24)
+def add_watermark(image, text="ProFaker", font_path="BRLNSDB.TTF", font_size=25):
+    # Load the Berlin Sans Demi font with the specified size
+    font = ImageFont.truetype(font_path, font_size)
+
+    # Position the watermark in the bottom right corner, adjusting for text size
+    text_bbox = font.getbbox(text)
+    text_width, text_height = text_bbox[2], text_bbox[3]
+    watermark_position = (image.width - text_width - 100, image.height - text_height - 150)
+
+    # Draw the watermark text with a translucent white color
+    draw = ImageDraw.Draw(image)
+    draw.text(watermark_position, text, font=font, fill=(255, 255, 255, 150))  # RGBA for transparency
+
+    return image
+
+
+@spaces.GPU
 def fill_image(prompt, image, model_selection, paste_back):
     (
         prompt_embeds,
@@ -80,6 +96,7 @@ def fill_image(prompt, image, model_selection, paste_back):
     else:
         cnet_image = image
 
+    cnet_image = add_watermark(cnet_image)
     yield source, cnet_image
 
 
