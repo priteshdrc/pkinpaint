@@ -143,7 +143,7 @@ with gr.Blocks() as demo:
                 )
             
             input_image = gr.ImageMask(
-                type="pil", label="Input Image", layers=False
+                type="pil", label="Input Image",crop_size=(1200,1200), layers=False
             )
         with gr.Column():
             model_selection = gr.Dropdown(
