@@ -43,7 +43,7 @@ pipe = StableDiffusionXLFillPipeline.from_pretrained(
     variant="fp16",
 ).to("cuda")
 
-pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config,algorithm_type="dpmsolver++",use_karras_sigmas=True)
+pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
