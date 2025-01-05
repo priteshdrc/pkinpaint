@@ -86,7 +86,7 @@ class StableDiffusionXLFillPipeline(DiffusionPipeline, StableDiffusionMixin):
         tokenizer_2: CLIPTokenizer,
         unet: UNet2DConditionModel,
         controlnet: ControlNetModel_Union,
-        scheduler: DPMSolverMultistepScheduler,
+        scheduler: KarrasDiffusionSchedulers,
         force_zeros_for_empty_prompt: bool = True,
     ):
         super().__init__()
