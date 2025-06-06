@@ -14,6 +14,13 @@ MODELS = {
     "RealVisXL V5.0 Lightning": "SG161222/RealVisXL_V5.0_Lightning",
 }
 
+# Set device for Apple Silicon (M4) Core ML/MPS
+if torch.backends.mps.is_available():
+    device = torch.device('mps')
+else:
+    device = torch.device('cpu')
+dtype = torch.float32  # Core ML/MPS prefers float32
+
 config_file = hf_hub_download(
     "xinsir/controlnet-union-sdxl-1.0",
     filename="config_promax.json",
@@ -29,25 +36,21 @@ state_dict = load_state_dict(model_file)
 model, _, _, _, _ = ControlNetModel_Union._load_pretrained_model(
     controlnet_model, state_dict, model_file, "xinsir/controlnet-union-sdxl-1.0"
 )
-model.to(device="cuda", dtype=torch.float16)
+model.to(device=device, dtype=dtype)
 
 vae = AutoencoderKL.from_pretrained(
-    "madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16
-).to("cuda")
+    "madebyollin/sdxl-vae-fp16-fix", torch_dtype=dtype
+).to(device)
 
 pipe = StableDiffusionXLFillPipeline.from_pretrained(
     "SG161222/RealVisXL_V5.0_Lightning",
-    torch_dtype=torch.float16,
+    torch_dtype=dtype,
     vae=vae,
     controlnet=model,
-    variant="fp16",
-).to("cuda")
+    # Remove variant for Core ML/MPS
+).to(device)
 
 pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config)
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-
 
 def add_watermark(image, text="ProFaker", font_path="BRLNSDB.TTF", font_size=25):
     # Load the Berlin Sans Demi font with the specified size
@@ -71,7 +74,7 @@ def fill_image(prompt, negative_prompt, image, model_selection, paste_back, guid
         negative_prompt_embeds,
         pooled_prompt_embeds,
         negative_pooled_prompt_embeds,
-    ) = pipe.encode_prompt(prompt, "cuda", True,negative_prompt=negative_prompt)
+    ) = pipe.encode_prompt(prompt, device, True, negative_prompt=negative_prompt)
 
     source = image["background"]
     mask = image["layers"][0]
@@ -87,8 +90,8 @@ def fill_image(prompt, negative_prompt, image, model_selection, paste_back, guid
         pooled_prompt_embeds=pooled_prompt_embeds,
         negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
         image=cnet_image,
-        guidance_scale = guidance_scale,
-        num_inference_steps = num_steps,
+        guidance_scale=guidance_scale,
+        num_inference_steps=num_steps,
     ):
         yield image, cnet_image
 
